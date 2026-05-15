@@ -1,0 +1,6 @@
+{
+  "name": "TimeNest",
+  "description": "A secure digital time capsule platform where users can store messages, photos, videos, and documents and lock them until a selected future date, event, recipient, or location condition is met.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
