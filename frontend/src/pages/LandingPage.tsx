@@ -3,8 +3,21 @@ import { CountdownTimer } from '../components/countdown-timer';
 import { InteractivePreview } from '../components/interactive-preview';
 import { motion } from 'motion/react';
 import { Users, LockKeyhole, MapPin, MailCheck, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const { isSignedIn } = useUser();
+
+  const handleCreateCapsule = () => {
+    if (isSignedIn) {
+      navigate('/dashboard');
+    } else {
+      navigate('/sign-in');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-paper text-ink overflow-x-hidden selection:bg-brand selection:text-white">
       <Navbar />
@@ -132,7 +145,7 @@ export default function LandingPage() {
             Join thousands of individuals and organizations who are safely storing their most valuable moments for the future.
           </p>
           <div className="pt-8">
-             <button className="px-8 py-4 bg-ink text-white rounded-full text-base font-semibold transition-all hover:bg-black hover:scale-105 active:scale-95 shadow-xl">
+             <button onClick={handleCreateCapsule} className="px-8 py-4 bg-ink text-white rounded-full text-base font-semibold transition-all hover:bg-black hover:scale-105 active:scale-95 shadow-xl">
                 Create Free Capsule
              </button>
           </div>

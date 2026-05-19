@@ -2,10 +2,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Menu, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useUser, UserButton } from '@clerk/clerk-react';
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { isSignedIn } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,6 +18,14 @@ export function Navbar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleCreateCapsule = () => {
+    if (isSignedIn) {
+      navigate('/dashboard');
+    } else {
+      navigate('/sign-in');
+    }
+  };
 
   return (
     <>
@@ -43,10 +55,14 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-4 text-sm font-medium">
-          <button className="hidden md:flex items-center gap-2 hover:text-brand text-[13px] transition-colors font-medium text-ink">
-            Sign In
-          </button>
-          <button className="px-5 py-2.5 bg-ink text-white rounded-full text-[13px] font-medium hover:bg-black transition-transform hover:scale-105 active:scale-95 shadow-sm">
+          {isSignedIn ? (
+            <UserButton afterSignOutUrl="/" />
+          ) : (
+            <button onClick={() => navigate('/sign-in')} className="hidden md:flex items-center gap-2 hover:text-brand text-[13px] transition-colors font-medium text-ink">
+              Sign In
+            </button>
+          )}
+          <button onClick={handleCreateCapsule} className="px-5 py-2.5 bg-ink text-white rounded-full text-[13px] font-medium hover:bg-black transition-transform hover:scale-105 active:scale-95 shadow-sm">
             Create Capsule
           </button>
         </div>
@@ -77,10 +93,16 @@ export function Navbar() {
             <a href="#use-cases" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-ink p-2">Archive</a>
           </div>
           <div className="flex flex-col gap-3 pt-4 border-t border-black/5">
-            <button className="w-full py-3.5 text-ink font-medium rounded-2xl hover:bg-black/5 transition-colors">
-              Sign In
-            </button>
-            <button className="w-full py-3.5 bg-brand text-white font-medium rounded-[1.5rem] shadow-md hover:bg-brand-light transition-colors">
+            {isSignedIn ? (
+              <div className="flex justify-center py-2">
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            ) : (
+              <button onClick={() => { navigate('/sign-in'); setMobileMenuOpen(false); }} className="w-full py-3.5 text-ink font-medium rounded-2xl hover:bg-black/5 transition-colors">
+                Sign In
+              </button>
+            )}
+            <button onClick={() => { handleCreateCapsule(); setMobileMenuOpen(false); }} className="w-full py-3.5 bg-brand text-white font-medium rounded-[1.5rem] shadow-md hover:bg-brand-light transition-colors">
               Create Capsule
             </button>
           </div>
