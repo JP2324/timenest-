@@ -9,17 +9,3 @@ export interface NavigationItem {
   label: string;
   icon: LucideIcon;
 }
-
-export interface MockCapsule {
-  id: string;
-  title: string;
-  status: CapsuleStatus;
-  unlockDate: string;
-  sender?: string;
-}
-
-export interface MockStat {
-  label: string;
-  value: number;
-  icon: LucideIcon;
-}

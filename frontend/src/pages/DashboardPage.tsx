@@ -8,8 +8,10 @@ import { ReceivedCapsulesView } from '../components/dashboard/ReceivedCapsulesVi
 import { ProfileView } from '../components/dashboard/ProfileView';
 import { CreateCapsuleModal } from '../components/dashboard/CreateCapsuleModal';
 import type { DashboardView } from '../components/dashboard/types';
+import { useUserSync } from '../hooks/useUserSync';
 
 export default function DashboardPage() {
+  useUserSync();
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);

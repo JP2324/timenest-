@@ -2,11 +2,19 @@ import { motion } from 'motion/react';
 import { LockKeyhole, LockOpen, Eye, Pencil, Trash2 } from 'lucide-react';
 import type { Key } from 'react';
 import { cn } from '../../lib/utils';
-import type { MockCapsule } from './types';
+import type { CapsuleStatus } from './types';
+
+interface CapsuleCardData {
+  id: string;
+  title: string;
+  status: CapsuleStatus;
+  unlockDate: string;
+  sender?: string;
+}
 
 interface CapsuleCardProps {
   key?: Key;
-  capsule: MockCapsule;
+  capsule: CapsuleCardData;
   index: number;
   showActions?: boolean;
   receivedMode?: boolean;

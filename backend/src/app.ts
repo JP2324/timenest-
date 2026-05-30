@@ -1,7 +1,9 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import { clerkMiddleware } from '@clerk/express';
 import healthRoutes from './routes/healthRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app: Application = express();
 
@@ -11,6 +13,8 @@ app.use(helmet());
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.CLIENT_URL || 'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
 ];
 
 app.use(
@@ -31,8 +35,15 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── Clerk Auth ────────────────────────────────────────────────────────────────
+app.use(clerkMiddleware());
+
 // ── Routes ────────────────────────────────────────────────────────────────────
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({ success: true, message: 'TimeNest API is running' });
+});
 app.use('/api/health', healthRoutes);
+app.use('/api/users', userRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

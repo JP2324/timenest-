@@ -1,7 +1,5 @@
 import { motion } from 'motion/react';
-import { Plus } from 'lucide-react';
-import { MOCK_STATS, MOCK_RECENT_CAPSULES } from './constants';
-import { CapsuleCard } from './CapsuleCard';
+import { Plus, Archive } from 'lucide-react';
 
 interface OverviewViewProps {
   onCreateCapsule: () => void;
@@ -36,37 +34,24 @@ export function OverviewView({ onCreateCapsule }: OverviewViewProps) {
         </button>
       </div>
 
-      {/* Stats — 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {MOCK_STATS.map((stat, idx) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.06, duration: 0.35 }}
-            className="bg-white border border-black/5 rounded-2xl p-5"
-          >
-            <div className="w-9 h-9 rounded-xl bg-brand-soft flex items-center justify-center text-brand mb-4">
-              <stat.icon className="w-4 h-4" />
-            </div>
-            <p className="text-2xl font-semibold tracking-tight text-ink">{stat.value}</p>
-            <p className="text-xs text-ink-muted mt-0.5">{stat.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Recent Capsules */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold tracking-tight text-ink">Recent Capsules</h3>
-          <span className="text-xs text-ink-muted">Showing latest</span>
+      {/* Empty State */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06, duration: 0.35 }}
+        className="bg-white border border-black/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
+      >
+        <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center text-brand mb-4">
+          <Archive className="w-5 h-5" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {MOCK_RECENT_CAPSULES.map((capsule, idx) => (
-            <CapsuleCard key={capsule.id} capsule={capsule} index={idx} />
-          ))}
-        </div>
-      </div>
+        <h3 className="text-base font-semibold tracking-tight text-ink">
+          No capsules yet
+        </h3>
+        <p className="text-sm text-ink-muted mt-1 max-w-xs">
+          Create your first time capsule to preserve a memory for the future.
+        </p>
+      </motion.div>
     </motion.div>
   );
 }
+
