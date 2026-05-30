@@ -1,28 +1,47 @@
 import { motion } from 'motion/react';
-import { LockKeyhole, LockOpen, Eye, Pencil, Trash2 } from 'lucide-react';
+import { LockKeyhole, LockOpen, Eye } from 'lucide-react';
 import type { Key } from 'react';
 import { cn } from '../../lib/utils';
-import type { CapsuleStatus } from './types';
-
-interface CapsuleCardData {
-  id: string;
-  title: string;
-  status: CapsuleStatus;
-  unlockDate: string;
-  sender?: string;
-}
+import type { Capsule } from './types';
 
 interface CapsuleCardProps {
   key?: Key;
-  capsule: CapsuleCardData;
+  capsule: Capsule;
   index: number;
-  showActions?: boolean;
   receivedMode?: boolean;
 }
 
-export function CapsuleCard({ capsule, index, showActions = true, receivedMode = false }: CapsuleCardProps) {
-  const isLocked = capsule.status === 'locked';
-  const StatusIcon = isLocked ? LockKeyhole : LockOpen;
+/**
+ * Determines if a capsule is currently locked based on its
+ * unlock date compared to the current time.
+ */
+const isCapsuleTimeLocked = (capsule: Capsule): boolean => {
+  if (!capsule.unlockDate) return capsule.status === 'locked';
+  return new Date(capsule.unlockDate) > new Date();
+};
+
+/**
+ * Formats a date string into a human-friendly display.
+ */
+const formatCapsuleDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
+export function CapsuleCard({ capsule, index, receivedMode = false }: CapsuleCardProps) {
+  const timeLocked = isCapsuleTimeLocked(capsule);
+  const StatusIcon = timeLocked ? LockKeyhole : LockOpen;
+
+  const handleView = () => {
+    if (timeLocked) return;
+    // Future: open capsule detail view
+  };
 
   return (
     <motion.div
@@ -39,50 +58,48 @@ export function CapsuleCard({ capsule, index, showActions = true, receivedMode =
         <span
           className={cn(
             "inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-semibold",
-            isLocked
+            timeLocked
               ? "bg-brand-soft text-brand"
               : "bg-emerald-50 text-emerald-600"
           )}
         >
-          {isLocked ? 'Locked' : 'Unlocked'}
+          {timeLocked ? 'Locked' : 'Unlocked'}
         </span>
       </div>
 
       {/* Info */}
       <h3 className="text-sm font-semibold tracking-tight text-ink mb-1">{capsule.title}</h3>
-      {capsule.sender && (
-        <p className="text-xs text-ink-muted mb-0.5">From: {capsule.sender}</p>
+      {receivedMode && capsule.creator && (
+        <p className="text-xs text-ink-muted mb-0.5">From someone special</p>
       )}
       <p className="text-xs text-ink-muted">
-        {isLocked ? `Unlocks: ${capsule.unlockDate}` : `Opened: ${capsule.unlockDate}`}
+        {timeLocked
+          ? `Unlocks: ${capsule.unlockDate ? formatCapsuleDate(capsule.unlockDate) : 'Unknown'}`
+          : `Unlocked: ${capsule.unlockDate ? formatCapsuleDate(capsule.unlockDate) : 'Unknown'}`}
       </p>
 
-      {/* Actions */}
+      {/* Media count indicator */}
+      {capsule.mediaUrls.length > 0 && (
+        <p className="text-[10px] text-ink-muted mt-1.5">
+          📎 {capsule.mediaUrls.length} {capsule.mediaUrls.length === 1 ? 'file' : 'files'} attached
+        </p>
+      )}
+
+      {/* View Action */}
       <div className="mt-auto pt-4 flex items-center gap-1.5">
         <button
+          onClick={handleView}
+          disabled={timeLocked}
           className={cn(
             "flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-200",
-            isLocked && receivedMode
-              ? "text-ink-muted bg-paper"
+            timeLocked
+              ? "text-ink-muted bg-paper cursor-not-allowed opacity-50"
               : "text-ink bg-paper hover:bg-black/5"
           )}
         >
           <Eye className="w-3.5 h-3.5" />
-          View
+          {timeLocked ? 'Locked' : 'View'}
         </button>
-
-        {showActions && !receivedMode && (
-          <>
-            <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-ink-muted bg-paper hover:bg-black/5 transition-colors duration-200">
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </button>
-            <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-paper hover:bg-red-50 transition-colors duration-200">
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </button>
-          </>
-        )}
       </div>
     </motion.div>
   );

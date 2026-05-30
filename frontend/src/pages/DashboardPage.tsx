@@ -9,9 +9,12 @@ import { ProfileView } from '../components/dashboard/ProfileView';
 import { CreateCapsuleModal } from '../components/dashboard/CreateCapsuleModal';
 import type { DashboardView } from '../components/dashboard/types';
 import { useUserSync } from '../hooks/useUserSync';
+import { useCapsules } from '../hooks/useCapsules';
 
 export default function DashboardPage() {
   useUserSync();
+  const { myCapsules, receivedCapsules, isLoading, refetch, unlockedNotificationCount } = useCapsules();
+
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -19,6 +22,10 @@ export default function DashboardPage() {
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
+
+  const handleCapsuleCreated = () => {
+    refetch();
+  };
 
   return (
     <div className="h-screen bg-paper flex overflow-hidden">
@@ -28,6 +35,7 @@ export default function DashboardPage() {
         onCreateCapsule={openModal}
         isOpen={sidebarOpen}
         onToggle={toggleSidebar}
+        notificationCount={unlockedNotificationCount}
       />
 
       <main className="flex-1 flex flex-col h-screen min-w-0">
@@ -36,13 +44,25 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-y-auto p-5 md:p-7">
           <AnimatePresence mode="wait">
             {activeView === 'overview' && (
-              <OverviewView onCreateCapsule={openModal} />
+              <OverviewView
+                onCreateCapsule={openModal}
+                myCapsules={myCapsules}
+                receivedCapsules={receivedCapsules}
+                isLoading={isLoading}
+              />
             )}
             {activeView === 'my-capsules' && (
-              <MyCapsulesView onCreateCapsule={openModal} />
+              <MyCapsulesView
+                onCreateCapsule={openModal}
+                capsules={myCapsules}
+                isLoading={isLoading}
+              />
             )}
             {activeView === 'received' && (
-              <ReceivedCapsulesView />
+              <ReceivedCapsulesView
+                capsules={receivedCapsules}
+                isLoading={isLoading}
+              />
             )}
             {activeView === 'profile' && (
               <ProfileView />
@@ -51,7 +71,11 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      <CreateCapsuleModal isOpen={modalOpen} onClose={closeModal} />
+      <CreateCapsuleModal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        onCapsuleCreated={handleCapsuleCreated}
+      />
     </div>
   );
 }

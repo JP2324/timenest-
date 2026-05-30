@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { clerkMiddleware } from '@clerk/express';
 import healthRoutes from './routes/healthRoutes';
 import userRoutes from './routes/userRoutes';
+import capsuleRoutes from './routes/capsuleRoutes';
 
 const app: Application = express();
 
@@ -44,6 +45,7 @@ app.get('/', (_req: Request, res: Response) => {
 });
 app.use('/api/health', healthRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/capsules', capsuleRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

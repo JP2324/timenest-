@@ -11,9 +11,10 @@ interface SidebarProps {
   onCreateCapsule: () => void;
   isOpen: boolean;
   onToggle: () => void;
+  notificationCount?: number;
 }
 
-export function Sidebar({ activeView, onViewChange, onCreateCapsule, isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ activeView, onViewChange, onCreateCapsule, isOpen, onToggle, notificationCount = 0 }: SidebarProps) {
   const { signOut } = useClerk();
 
   const handleSignOut = () => {
@@ -93,6 +94,11 @@ export function Sidebar({ activeView, onViewChange, onCreateCapsule, isOpen, onT
             >
               <item.icon className="w-[18px] h-[18px]" />
               {item.label}
+              {item.id === 'received' && notificationCount > 0 && (
+                <span className="ml-auto w-5 h-5 rounded-full bg-white text-brand text-[10px] font-bold flex items-center justify-center">
+                  {notificationCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>

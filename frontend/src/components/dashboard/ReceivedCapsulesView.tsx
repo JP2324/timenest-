@@ -3,9 +3,28 @@ import { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { FILTER_TABS } from './constants';
+import { CapsuleCard } from './CapsuleCard';
+import type { Capsule } from './types';
 
-export function ReceivedCapsulesView() {
+interface ReceivedCapsulesViewProps {
+  capsules: Capsule[];
+  isLoading: boolean;
+}
+
+export function ReceivedCapsulesView({ capsules, isLoading }: ReceivedCapsulesViewProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
+
+  const filteredCapsules = capsules.filter((capsule) => {
+    if (activeFilter === 'All') return true;
+
+    const isTimeLocked = capsule.unlockDate
+      ? new Date(capsule.unlockDate) > new Date()
+      : capsule.status === 'locked';
+
+    if (activeFilter === 'Locked') return isTimeLocked;
+    if (activeFilter === 'Unlocked') return !isTimeLocked;
+    return true;
+  });
 
   return (
     <motion.div
@@ -39,24 +58,41 @@ export function ReceivedCapsulesView() {
         ))}
       </div>
 
-      {/* Empty State */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06, duration: 0.35 }}
-        className="bg-white border border-black/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
-      >
-        <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center text-brand mb-4">
-          <Mail className="w-5 h-5" />
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <div className="w-6 h-6 border-2 border-brand/20 border-t-brand rounded-full animate-spin" />
         </div>
-        <h3 className="text-base font-semibold tracking-tight text-ink">
-          No received capsules yet
-        </h3>
-        <p className="text-sm text-ink-muted mt-1 max-w-xs">
-          When someone shares a time capsule with you, it will appear here.
-        </p>
-      </motion.div>
+      )}
+
+      {/* Capsules Grid */}
+      {!isLoading && filteredCapsules.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCapsules.map((capsule, index) => (
+            <CapsuleCard key={capsule._id} capsule={capsule} index={index} receivedMode />
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredCapsules.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.06, duration: 0.35 }}
+          className="bg-white border border-black/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center text-brand mb-4">
+            <Mail className="w-5 h-5" />
+          </div>
+          <h3 className="text-base font-semibold tracking-tight text-ink">
+            {activeFilter === 'All' ? 'No received capsules yet' : `No ${activeFilter.toLowerCase()} capsules`}
+          </h3>
+          <p className="text-sm text-ink-muted mt-1 max-w-xs">
+            When someone shares a time capsule with you, it will appear here.
+          </p>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
-

@@ -1,11 +1,57 @@
+import React from 'react';
 import { motion } from 'motion/react';
-import { Plus, Archive } from 'lucide-react';
+import { Plus, Archive, LockKeyhole, LockOpen } from 'lucide-react';
+import { CapsuleCard } from './CapsuleCard';
+import type { Capsule } from './types';
 
 interface OverviewViewProps {
   onCreateCapsule: () => void;
+  myCapsules: Capsule[];
+  receivedCapsules: Capsule[];
+  isLoading: boolean;
 }
 
-export function OverviewView({ onCreateCapsule }: OverviewViewProps) {
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  delay: number;
+}
+
+function StatCard({ label, value, icon: Icon, delay }: StatCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35 }}
+      className="bg-white border border-black/5 rounded-2xl p-5"
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-9 h-9 rounded-xl bg-brand-soft flex items-center justify-center text-brand">
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+      <p className="text-2xl font-semibold tracking-tight text-ink">{value}</p>
+      <p className="text-xs text-ink-muted mt-0.5">{label}</p>
+    </motion.div>
+  );
+}
+
+export function OverviewView({ onCreateCapsule, myCapsules, receivedCapsules, isLoading }: OverviewViewProps) {
+  const allCapsules = [...myCapsules, ...receivedCapsules];
+
+  const totalCount = allCapsules.length;
+  const lockedCount = allCapsules.filter((c) => {
+    if (!c.unlockDate) return c.status === 'locked';
+    return new Date(c.unlockDate) > new Date();
+  }).length;
+  const unlockedCount = totalCount - lockedCount;
+
+  // Show the 4 most recent capsules across both created & received
+  const recentCapsules = allCapsules
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 4);
+
   return (
     <motion.div
       key="overview"
@@ -34,24 +80,53 @@ export function OverviewView({ onCreateCapsule }: OverviewViewProps) {
         </button>
       </div>
 
-      {/* Empty State */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06, duration: 0.35 }}
-        className="bg-white border border-black/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
-      >
-        <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center text-brand mb-4">
-          <Archive className="w-5 h-5" />
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <div className="w-6 h-6 border-2 border-brand/20 border-t-brand rounded-full animate-spin" />
         </div>
-        <h3 className="text-base font-semibold tracking-tight text-ink">
-          No capsules yet
-        </h3>
-        <p className="text-sm text-ink-muted mt-1 max-w-xs">
-          Create your first time capsule to preserve a memory for the future.
-        </p>
-      </motion.div>
+      )}
+
+      {/* Stats Grid */}
+      {!isLoading && totalCount > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard label="Total Capsules" value={totalCount} icon={Archive} delay={0.04} />
+          <StatCard label="Locked" value={lockedCount} icon={LockKeyhole} delay={0.08} />
+          <StatCard label="Unlocked" value={unlockedCount} icon={LockOpen} delay={0.12} />
+        </div>
+      )}
+
+      {/* Recent Capsules */}
+      {!isLoading && recentCapsules.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-ink-muted mb-3">Recent Capsules</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {recentCapsules.map((capsule, index) => (
+              <CapsuleCard key={capsule._id} capsule={capsule} index={index} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && totalCount === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.06, duration: 0.35 }}
+          className="bg-white border border-black/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-brand-soft flex items-center justify-center text-brand mb-4">
+            <Archive className="w-5 h-5" />
+          </div>
+          <h3 className="text-base font-semibold tracking-tight text-ink">
+            No capsules yet
+          </h3>
+          <p className="text-sm text-ink-muted mt-1 max-w-xs">
+            Create your first time capsule to preserve a memory for the future.
+          </p>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
-
