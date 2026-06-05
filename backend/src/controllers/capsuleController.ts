@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { getAuth } from '@clerk/express';
+import mongoose from 'mongoose';
 import * as capsuleService from '../services/capsuleService';
 import type { CreateCapsulePayload } from '../types/capsule.types';
 
@@ -17,7 +18,7 @@ export const createCapsule = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const { title, message, recipientEmail, mediaUrls, capsuleType, unlockDate } = req.body as CreateCapsulePayload;
+    const { title, message, recipientEmail, recipientUsername, mediaUrls, capsuleType, unlockDate } = req.body as CreateCapsulePayload;
 
     if (!title || !title.trim()) {
       res.status(400).json({ success: false, message: 'Capsule title is required' });
@@ -39,6 +40,7 @@ export const createCapsule = async (req: Request, res: Response, next: NextFunct
       title: title.trim(),
       message,
       recipientEmail,
+      recipientUsername,
       mediaUrls: mediaUrls || [],
       capsuleType: capsuleType || 'time',
       unlockDate,
@@ -87,6 +89,46 @@ export const getReceivedCapsules = async (req: Request, res: Response, next: Nex
 
     const capsules = await capsuleService.getReceivedCapsules(clerkId);
     res.status(200).json({ success: true, capsules });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/capsules/:id
+ * Returns a single capsule by ID. Only the creator or a recipient may access it.
+ * Locked capsules have sensitive content (message, mediaUrls) withheld.
+ */
+export const getCapsuleById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const auth = getAuth(req);
+    const clerkId = auth.userId;
+
+    if (!clerkId) {
+      res.status(401).json({ success: false, message: 'Authentication required' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: 'Invalid capsule ID' });
+      return;
+    }
+
+    const { capsule, forbidden } = await capsuleService.getCapsuleById(id, clerkId);
+
+    if (forbidden) {
+      res.status(403).json({ success: false, message: 'You do not have access to this capsule' });
+      return;
+    }
+
+    if (!capsule) {
+      res.status(404).json({ success: false, message: 'Capsule not found' });
+      return;
+    }
+
+    res.status(200).json({ success: true, capsule });
   } catch (error) {
     next(error);
   }

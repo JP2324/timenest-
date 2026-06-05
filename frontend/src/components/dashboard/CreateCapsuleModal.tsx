@@ -35,6 +35,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientUsername, setRecipientUsername] = useState('');
   const [capsuleType, setCapsuleType] = useState<CapsuleTypeOption>('time');
 
   // Phase 2 — File Uploads
@@ -57,6 +58,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
     setTitle('');
     setMessage('');
     setRecipientEmail('');
+    setRecipientUsername('');
     setCapsuleType('time');
     setUploadedFiles([]);
     setUnlockDate('');
@@ -185,6 +187,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
           title: title.trim(),
           message: message.trim() || undefined,
           recipientEmail: recipientEmail.trim() || undefined,
+          recipientUsername: recipientUsername.trim() || undefined,
           mediaUrls,
           capsuleType,
           unlockDate: new Date(unlockDate).toISOString(),
@@ -381,13 +384,29 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
 
                   <div>
                     <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
+                      Recipient Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-ink-muted/50 font-medium select-none">@</span>
+                      <input
+                        type="text"
+                        value={recipientUsername}
+                        onChange={(e) => setRecipientUsername(e.target.value)}
+                        placeholder="username (optional)"
+                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
                       Recipient Email
                     </label>
                     <input
                       type="email"
                       value={recipientEmail}
                       onChange={(e) => setRecipientEmail(e.target.value)}
-                      placeholder="Who should receive this? (optional)"
+                      placeholder="email@example.com (optional)"
                       className="w-full px-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
                     />
                   </div>

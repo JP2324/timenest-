@@ -6,6 +6,7 @@ import type { Capsule } from './types';
 
 interface OverviewViewProps {
   onCreateCapsule: () => void;
+  onViewCapsule: (capsuleId: string) => void;
   myCapsules: Capsule[];
   receivedCapsules: Capsule[];
   isLoading: boolean;
@@ -37,7 +38,7 @@ function StatCard({ label, value, icon: Icon, delay }: StatCardProps) {
   );
 }
 
-export function OverviewView({ onCreateCapsule, myCapsules, receivedCapsules, isLoading }: OverviewViewProps) {
+export function OverviewView({ onCreateCapsule, onViewCapsule, myCapsules, receivedCapsules, isLoading }: OverviewViewProps) {
   const allCapsules = [...myCapsules, ...receivedCapsules];
 
   const totalCount = allCapsules.length;
@@ -102,7 +103,7 @@ export function OverviewView({ onCreateCapsule, myCapsules, receivedCapsules, is
           <h3 className="text-sm font-semibold text-ink-muted mb-3">Recent Capsules</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {recentCapsules.map((capsule, index) => (
-              <CapsuleCard key={capsule._id} capsule={capsule} index={index} />
+              <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} />
             ))}
           </div>
         </div>

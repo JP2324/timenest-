@@ -9,6 +9,7 @@ interface CapsuleCardProps {
   capsule: Capsule;
   index: number;
   receivedMode?: boolean;
+  onView?: (capsuleId: string) => void;
 }
 
 /**
@@ -34,13 +35,13 @@ const formatCapsuleDate = (dateString: string): string => {
   });
 };
 
-export function CapsuleCard({ capsule, index, receivedMode = false }: CapsuleCardProps) {
+export function CapsuleCard({ capsule, index, receivedMode = false, onView }: CapsuleCardProps) {
   const timeLocked = isCapsuleTimeLocked(capsule);
   const StatusIcon = timeLocked ? LockKeyhole : LockOpen;
 
   const handleView = () => {
     if (timeLocked) return;
-    // Future: open capsule detail view
+    onView?.(capsule._id);
   };
 
   return (

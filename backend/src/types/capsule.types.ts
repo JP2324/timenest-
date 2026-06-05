@@ -5,6 +5,7 @@ export interface CreateCapsulePayload {
   title: string;
   message?: string;
   recipientEmail?: string;
+  recipientUsername?: string;
   mediaUrls: string[];
   capsuleType: 'time';
   unlockDate: string; // ISO 8601 date string

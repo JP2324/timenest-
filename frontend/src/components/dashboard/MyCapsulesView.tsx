@@ -8,11 +8,12 @@ import type { Capsule } from './types';
 
 interface MyCapsulesViewProps {
   onCreateCapsule: () => void;
+  onViewCapsule: (capsuleId: string) => void;
   capsules: Capsule[];
   isLoading: boolean;
 }
 
-export function MyCapsulesView({ onCreateCapsule, capsules, isLoading }: MyCapsulesViewProps) {
+export function MyCapsulesView({ onCreateCapsule, onViewCapsule, capsules, isLoading }: MyCapsulesViewProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
 
   const filteredCapsules = capsules.filter((capsule) => {
@@ -81,7 +82,7 @@ export function MyCapsulesView({ onCreateCapsule, capsules, isLoading }: MyCapsu
       {!isLoading && filteredCapsules.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCapsules.map((capsule, index) => (
-            <CapsuleCard key={capsule._id} capsule={capsule} index={index} />
+            <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} />
           ))}
         </div>
       )}
