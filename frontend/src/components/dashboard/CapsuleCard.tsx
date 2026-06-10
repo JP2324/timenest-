@@ -35,6 +35,21 @@ const formatCapsuleDate = (dateString: string): string => {
   });
 };
 
+/** Entrance animation using spring physics for organic feel */
+const CARD_ENTRANCE_VARIANTS = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: index * 0.05,
+      type: 'spring',
+      stiffness: 300,
+      damping: 25,
+    },
+  }),
+};
+
 export function CapsuleCard({ capsule, index, receivedMode = false, onView }: CapsuleCardProps) {
   const timeLocked = isCapsuleTimeLocked(capsule);
   const StatusIcon = timeLocked ? LockKeyhole : LockOpen;
@@ -46,10 +61,11 @@ export function CapsuleCard({ capsule, index, receivedMode = false, onView }: Ca
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.35 }}
-      className="bg-white border border-black/5 rounded-2xl p-5 hover:shadow-md hover:border-black/8 transition-all duration-200 flex flex-col"
+      variants={CARD_ENTRANCE_VARIANTS}
+      initial="hidden"
+      animate="visible"
+      custom={index}
+      className="bg-white border border-black/5 rounded-2xl p-5 flex flex-col capsule-card"
     >
       {/* Top row */}
       <div className="flex items-start justify-between mb-3">
@@ -105,3 +121,4 @@ export function CapsuleCard({ capsule, index, receivedMode = false, onView }: Ca
     </motion.div>
   );
 }
+

@@ -1,13 +1,15 @@
 import { UserButton } from '@clerk/clerk-react';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, RefreshCw } from 'lucide-react';
 import { VIEW_TITLES } from './constants';
 import type { DashboardView } from './types';
 
 interface TopBarProps {
   activeView: DashboardView;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
-export function TopBar({ activeView }: TopBarProps) {
+export function TopBar({ activeView, onRefresh, isRefreshing }: TopBarProps) {
   const title = VIEW_TITLES[activeView] ?? 'Dashboard';
 
   return (
@@ -35,6 +37,17 @@ export function TopBar({ activeView }: TopBarProps) {
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
           <button
+            id="dashboard-refresh"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            title="Refresh capsules"
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-black/5 text-ink-muted hover:text-ink hover:border-black/10 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw
+              className={`w-4 h-4 transition-transform duration-200 ${isRefreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
+          <button
             id="notification-bell"
             className="w-9 h-9 flex items-center justify-center rounded-xl border border-black/5 text-ink-muted hover:text-ink hover:border-black/10 transition-colors duration-200"
           >
@@ -58,3 +71,4 @@ export function TopBar({ activeView }: TopBarProps) {
     </div>
   );
 }
+

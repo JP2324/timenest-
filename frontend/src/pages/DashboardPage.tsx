@@ -14,7 +14,7 @@ import { useCapsules } from '../hooks/useCapsules';
 
 export default function DashboardPage() {
   useUserSync();
-  const { myCapsules, receivedCapsules, isLoading, refetch, unlockedNotificationCount } = useCapsules();
+  const { myCapsules, receivedCapsules, isLoading, isRefreshing, refetch, unlockedNotificationCount } = useCapsules();
 
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,7 +55,7 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 flex flex-col h-screen min-w-0">
-        <TopBar activeView={activeView} />
+        <TopBar activeView={activeView} onRefresh={refetch} isRefreshing={isRefreshing} />
 
         <div className="flex-1 overflow-y-auto p-5 md:p-7">
           <AnimatePresence mode="wait">

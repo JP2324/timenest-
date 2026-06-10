@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import type { Capsule } from '../components/dashboard/types';
 
@@ -8,22 +8,32 @@ interface UseCapsuleReturn {
   myCapsules: Capsule[];
   receivedCapsules: Capsule[];
   isLoading: boolean;
-  refetch: () => void;
+  isRefreshing: boolean;
+  refetch: () => Promise<void>;
   /** Count of received capsules whose unlockDate has passed (newly openable) */
   unlockedNotificationCount: number;
 }
 
 /**
  * Fetches the authenticated user's created and received capsules.
- * Provides a refetch callback for use after capsule creation.
+ * Separates initial load (isLoading) from manual refresh (isRefreshing)
+ * so existing data stays visible during background re-fetches.
  */
 export function useCapsules(): UseCapsuleReturn {
   const { getToken } = useAuth();
   const [myCapsules, setMyCapsules] = useState<Capsule[]>([]);
   const [receivedCapsules, setReceivedCapsules] = useState<Capsule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
   const fetchCapsules = useCallback(async () => {
+    // Show full loading skeleton only on first mount
+    const isManualRefresh = hasLoadedOnce.current;
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    }
+
     try {
       const token = await getToken();
       const headers = {
@@ -48,7 +58,9 @@ export function useCapsules(): UseCapsuleReturn {
     } catch (error) {
       console.error('Failed to fetch capsules:', error);
     } finally {
+      hasLoadedOnce.current = true;
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [getToken]);
 
@@ -65,6 +77,7 @@ export function useCapsules(): UseCapsuleReturn {
     myCapsules,
     receivedCapsules,
     isLoading,
+    isRefreshing,
     refetch: fetchCapsules,
     unlockedNotificationCount,
   };
