@@ -11,10 +11,13 @@ import { CapsuleDetailView } from '../components/dashboard/CapsuleDetailView';
 import type { DashboardView } from '../components/dashboard/types';
 import { useUserSync } from '../hooks/useUserSync';
 import { useCapsules } from '../hooks/useCapsules';
+import { useNotifications } from '../hooks/useNotifications';
 
 export default function DashboardPage() {
   useUserSync();
   const { myCapsules, receivedCapsules, isLoading, isRefreshing, refetch, unlockedNotificationCount } = useCapsules();
+
+  const { notifications, unreadCount, markAsRead, markAllAsRead, refetch: refetchNotifications } = useNotifications();
 
   const [activeView, setActiveView] = useState<DashboardView>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,6 +30,7 @@ export default function DashboardPage() {
 
   const handleCapsuleCreated = () => {
     refetch();
+    refetchNotifications();
   };
 
   const handleViewCapsule = (capsuleId: string) => {
@@ -55,7 +59,15 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 flex flex-col h-screen min-w-0">
-        <TopBar activeView={activeView} onRefresh={refetch} isRefreshing={isRefreshing} />
+        <TopBar
+          activeView={activeView}
+          onRefresh={refetch}
+          isRefreshing={isRefreshing}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={markAsRead}
+          onMarkAllAsRead={markAllAsRead}
+        />
 
         <div className="flex-1 overflow-y-auto p-5 md:p-7">
           <AnimatePresence mode="wait">

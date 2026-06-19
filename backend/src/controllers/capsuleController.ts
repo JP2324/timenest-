@@ -6,7 +6,8 @@ import type { CreateCapsulePayload } from '../types/capsule.types';
 
 /**
  * POST /api/capsules
- * Creates a new time-based capsule for the authenticated user.
+ * Creates a new capsule for the authenticated user.
+ * Supports both normal (time) and group capsule types.
  */
 export const createCapsule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -18,7 +19,7 @@ export const createCapsule = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const { title, message, recipientEmail, recipientUsername, mediaUrls, capsuleType, unlockDate } = req.body as CreateCapsulePayload;
+    const { title, message, recipientEmail, recipientUsername, mediaUrls, capsuleType, unlockDate, groupRecipients } = req.body as CreateCapsulePayload;
 
     if (!title || !title.trim()) {
       res.status(400).json({ success: false, message: 'Capsule title is required' });
@@ -36,6 +37,14 @@ export const createCapsule = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
+    // Group capsules require at least one recipient
+    if (capsuleType === 'group') {
+      if (!groupRecipients || !Array.isArray(groupRecipients) || groupRecipients.length === 0) {
+        res.status(400).json({ success: false, message: 'Group capsules require at least one recipient' });
+        return;
+      }
+    }
+
     const capsule = await capsuleService.createCapsule(clerkId, {
       title: title.trim(),
       message,
@@ -44,6 +53,7 @@ export const createCapsule = async (req: Request, res: Response, next: NextFunct
       mediaUrls: mediaUrls || [],
       capsuleType: capsuleType || 'time',
       unlockDate,
+      groupRecipients,
     });
 
     res.status(201).json({ success: true, capsule });

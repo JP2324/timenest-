@@ -5,6 +5,7 @@ import { clerkMiddleware } from '@clerk/express';
 import healthRoutes from './routes/healthRoutes';
 import userRoutes from './routes/userRoutes';
 import capsuleRoutes from './routes/capsuleRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 
 const app: Application = express();
 
@@ -46,6 +47,7 @@ app.get('/', (_req: Request, res: Response) => {
 app.use('/api/health', healthRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/capsules', capsuleRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {

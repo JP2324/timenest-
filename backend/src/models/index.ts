@@ -6,3 +6,6 @@ export type { ICapsule, IUnlockLocation, IGroupDetails, CapsuleType, CapsuleStat
 
 export { Group } from './group.model';
 export type { IGroup } from './group.model';
+
+export { Notification, NOTIFICATION_TYPES } from './notification.model';
+export type { INotification, INotificationMetadata, NotificationType } from './notification.model';

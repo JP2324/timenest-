@@ -2,8 +2,9 @@ import mongoose from 'mongoose';
 import { Capsule } from '../models/capsule.model';
 import { User } from '../models/user.model';
 import imagekitClient from '../config/imagekit';
-import type { ICapsule } from '../models/capsule.model';
-import type { CreateCapsulePayload, ImageKitUploadResult } from '../types/capsule.types';
+import * as notificationService from './notificationService';
+import type { ICapsule, IGroupMember } from '../models/capsule.model';
+import type { CreateCapsulePayload, GroupRecipientEntry, ImageKitUploadResult } from '../types/capsule.types';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -19,41 +20,10 @@ const syncExpiredCapsuleStatuses = async (): Promise<void> => {
   );
 };
 
-// ── Create ───────────────────────────────────────────────────────────────────
+// ── Recipient Resolution ─────────────────────────────────────────────────────
 
 /**
- * Creates a new time-based capsule and saves it to MongoDB.
- * Resolves the creator's clerkId → ObjectId, and optionally resolves
- * the recipient by username or email if a matching user exists.
- */
-export const createCapsule = async (
-  creatorClerkId: string,
-  payload: CreateCapsulePayload
-): Promise<ICapsule> => {
-  const creator = await User.findOne({ clerkId: creatorClerkId });
-
-  if (!creator) {
-    throw new Error('Creator user not found in database');
-  }
-
-  const recipients = await resolveRecipients(payload.recipientEmail, payload.recipientUsername);
-
-  const capsule = await Capsule.create({
-    creator: creator._id,
-    title: payload.title,
-    message: payload.message ?? undefined,
-    mediaUrls: payload.mediaUrls,
-    capsuleType: payload.capsuleType,
-    status: 'locked',
-    recipients,
-    unlockDate: new Date(payload.unlockDate),
-  });
-
-  return capsule;
-};
-
-/**
- * Resolves a recipient by username or email to an array of User ObjectIds.
+ * Resolves a single recipient by username or email to an array of User ObjectIds.
  * Username takes priority. Returns an empty array if no match is found.
  */
 const resolveRecipients = async (email?: string, username?: string): Promise<string[]> => {
@@ -74,6 +44,116 @@ const resolveRecipients = async (email?: string, username?: string): Promise<str
   }
 
   return recipientIds;
+};
+
+/**
+ * Resolves multiple group recipients by username or email.
+ * Returns deduplicated recipient IDs and a members list for groupDetails.
+ */
+const resolveGroupRecipients = async (
+  entries: GroupRecipientEntry[]
+): Promise<{ recipientIds: string[]; members: IGroupMember[] }> => {
+  const recipientIds: string[] = [];
+  const members: IGroupMember[] = [];
+  const seenIds = new Set<string>();
+
+  for (const entry of entries) {
+    let foundUser = null;
+
+    if (entry.username) {
+      foundUser = await User.findOne({ username: entry.username.trim() });
+    }
+
+    if (!foundUser && entry.email) {
+      foundUser = await User.findOne({ email: entry.email.toLowerCase().trim() });
+    }
+
+    if (foundUser) {
+      const idStr = foundUser._id.toString();
+
+      // Skip duplicates
+      if (seenIds.has(idStr)) continue;
+
+      seenIds.add(idStr);
+      recipientIds.push(idStr);
+      members.push({
+        userId: foundUser._id,
+        username: foundUser.username,
+      });
+    }
+  }
+
+  return { recipientIds, members };
+};
+
+// ── Create ───────────────────────────────────────────────────────────────────
+
+/**
+ * Creates a new capsule and saves it to MongoDB.
+ * Handles both normal (time) and group capsule types.
+ *
+ * For group capsules:
+ *  - Resolves multiple recipients from the groupRecipients array
+ *  - Populates groupDetails with auto-generated group name and member list
+ *  - Sends notifications to all recipients
+ */
+export const createCapsule = async (
+  creatorClerkId: string,
+  payload: CreateCapsulePayload
+): Promise<ICapsule> => {
+  const creator = await User.findOne({ clerkId: creatorClerkId });
+
+  if (!creator) {
+    throw new Error('Creator user not found in database');
+  }
+
+  let recipients: string[] = [];
+  let groupDetails = undefined;
+
+  if (payload.capsuleType === 'group') {
+    if (!payload.groupRecipients || payload.groupRecipients.length === 0) {
+      throw new Error('Group capsules require at least one recipient');
+    }
+
+    const resolved = await resolveGroupRecipients(payload.groupRecipients);
+
+    if (resolved.recipientIds.length === 0) {
+      throw new Error('No valid recipients found. Please check the usernames or emails provided.');
+    }
+
+    recipients = resolved.recipientIds;
+    groupDetails = {
+      groupName: `Group Capsule by @${creator.username}`,
+      members: resolved.members,
+    };
+  } else {
+    recipients = await resolveRecipients(payload.recipientEmail, payload.recipientUsername);
+  }
+
+  const capsule = await Capsule.create({
+    creator: creator._id,
+    title: payload.title,
+    message: payload.message ?? undefined,
+    mediaUrls: payload.mediaUrls,
+    capsuleType: payload.capsuleType,
+    status: 'locked',
+    recipients,
+    unlockDate: new Date(payload.unlockDate),
+    groupDetails,
+  });
+
+  // Send notifications to all group recipients after capsule creation
+  if (payload.capsuleType === 'group' && recipients.length > 0) {
+    await notificationService.createGroupCapsuleNotifications(
+      creator.username,
+      creator._id.toString(),
+      capsule._id.toString(),
+      capsule.title,
+      recipients
+    );
+  }
+
+  return capsule;
 };
 
 // ── Read ─────────────────────────────────────────────────────────────────────

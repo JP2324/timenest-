@@ -27,3 +27,25 @@ export interface NavigationItem {
   label: string;
   icon: LucideIcon;
 }
+
+export interface GroupRecipientEntry {
+  username: string;
+  email: string;
+}
+
+export interface NotificationMetadata {
+  capsuleId?: string;
+  creatorUsername?: string;
+  creatorId?: string;
+}
+
+export interface AppNotification {
+  _id: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata: NotificationMetadata;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}

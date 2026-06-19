@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Upload, Lock, MapPin, Users, Clock, FileText, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { X, Upload, Lock, MapPin, Users, Clock, FileText, Trash2, ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
 import { useAuth } from '@clerk/clerk-react';
 import { cn } from '../../lib/utils';
 import { CREATE_CAPSULE_STEPS } from './constants';
+import type { GroupRecipientEntry } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MAX_FILE_SIZE_MB = 50;
@@ -38,6 +39,11 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
   const [recipientUsername, setRecipientUsername] = useState('');
   const [capsuleType, setCapsuleType] = useState<CapsuleTypeOption>('time');
 
+  // Group Recipients
+  const [groupRecipients, setGroupRecipients] = useState<GroupRecipientEntry[]>([]);
+  const [groupUsernameInput, setGroupUsernameInput] = useState('');
+  const [groupEmailInput, setGroupEmailInput] = useState('');
+
   // Phase 2 — File Uploads
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -60,6 +66,9 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
     setRecipientEmail('');
     setRecipientUsername('');
     setCapsuleType('time');
+    setGroupRecipients([]);
+    setGroupUsernameInput('');
+    setGroupEmailInput('');
     setUploadedFiles([]);
     setUnlockDate('');
     setError('');
@@ -82,7 +91,40 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
 
   // ── Phase 1 Validation ────────────────────────────────────────────────────
 
-  const isPhase1Valid = title.trim().length > 0;
+  const isPhase1Valid = capsuleType === 'group'
+    ? title.trim().length > 0 && groupRecipients.length > 0
+    : title.trim().length > 0;
+
+  // ── Group Recipient Helpers ──────────────────────────────────────────────
+
+  const addGroupRecipient = () => {
+    const username = groupUsernameInput.trim();
+    const email = groupEmailInput.trim();
+
+    if (!username && !email) {
+      setError('Please enter a username or email');
+      return;
+    }
+
+    // Check for duplicates
+    const isDuplicate = groupRecipients.some(
+      (r) => (username && r.username === username) || (email && r.email === email)
+    );
+
+    if (isDuplicate) {
+      setError('This recipient has already been added');
+      return;
+    }
+
+    setGroupRecipients((prev) => [...prev, { username, email }]);
+    setGroupUsernameInput('');
+    setGroupEmailInput('');
+    setError('');
+  };
+
+  const removeGroupRecipient = (index: number) => {
+    setGroupRecipients((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // ── Phase 2 — File Handling ───────────────────────────────────────────────
 
@@ -186,8 +228,12 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
         body: JSON.stringify({
           title: title.trim(),
           message: message.trim() || undefined,
-          recipientEmail: recipientEmail.trim() || undefined,
-          recipientUsername: recipientUsername.trim() || undefined,
+          ...(capsuleType === 'group'
+            ? { groupRecipients }
+            : {
+                recipientEmail: recipientEmail.trim() || undefined,
+                recipientUsername: recipientUsername.trim() || undefined,
+              }),
           mediaUrls,
           capsuleType,
           unlockDate: new Date(unlockDate).toISOString(),
@@ -230,7 +276,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
   const capsuleTypeOptions = [
     { id: 'time' as const, icon: Clock, label: 'Normal', description: 'Time-based capsule', enabled: true },
     { id: 'location' as const, icon: MapPin, label: 'Location', description: 'Coming soon', enabled: false },
-    { id: 'group' as const, icon: Users, label: 'Group', description: 'Coming soon', enabled: false },
+    { id: 'group' as const, icon: Users, label: 'Group', description: 'Multi-recipient capsule', enabled: true },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -382,34 +428,104 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
                     />
                   </div>
 
-                  <div>
-                    <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
-                      Recipient Username
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-ink-muted/50 font-medium select-none">@</span>
-                      <input
-                        type="text"
-                        value={recipientUsername}
-                        onChange={(e) => setRecipientUsername(e.target.value)}
-                        placeholder="username (optional)"
-                        className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
-                      />
-                    </div>
-                  </div>
+                  {/* Recipient Fields — conditional based on capsule type */}
+                  {capsuleType === 'group' ? (
+                    <div>
+                      <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
+                        Group Recipients
+                      </label>
 
-                  <div>
-                    <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
-                      Recipient Email
-                    </label>
-                    <input
-                      type="email"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                      placeholder="email@example.com (optional)"
-                      className="w-full px-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
-                    />
-                  </div>
+                      {/* Add Recipient Row */}
+                      <div className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-ink-muted/50 font-medium select-none">@</span>
+                            <input
+                              type="text"
+                              value={groupUsernameInput}
+                              onChange={(e) => setGroupUsernameInput(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGroupRecipient())}
+                              placeholder="username"
+                              className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <input
+                            type="email"
+                            value={groupEmailInput}
+                            onChange={(e) => setGroupEmailInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addGroupRecipient())}
+                            placeholder="or email"
+                            className="w-full px-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addGroupRecipient}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-brand text-white hover:bg-brand-light active:scale-95 transition-all duration-200 shrink-0"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Recipient Tags */}
+                      {groupRecipients.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          {groupRecipients.map((recipient, index) => (
+                            <span
+                              key={`${recipient.username || recipient.email}-${index}`}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-soft text-brand text-xs font-medium"
+                            >
+                              {recipient.username ? `@${recipient.username}` : recipient.email}
+                              <button
+                                type="button"
+                                onClick={() => removeGroupRecipient(index)}
+                                className="w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-brand/10 transition-colors"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-ink-muted mt-1.5">
+                        Add recipients by username or email. At least one is required.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
+                          Recipient Username
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-ink-muted/50 font-medium select-none">@</span>
+                          <input
+                            type="text"
+                            value={recipientUsername}
+                            onChange={(e) => setRecipientUsername(e.target.value)}
+                            placeholder="username (optional)"
+                            className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] uppercase font-semibold tracking-wider text-ink-muted mb-1.5 block">
+                          Recipient Email
+                        </label>
+                        <input
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          placeholder="email@example.com (optional)"
+                          className="w-full px-4 py-2.5 rounded-xl border border-black/5 bg-paper text-sm text-ink placeholder:text-ink-muted/50 focus:outline-none focus:border-brand/20 transition-colors"
+                        />
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               )}
 
