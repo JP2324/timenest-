@@ -10,6 +10,7 @@ interface OverviewViewProps {
   myCapsules: Capsule[];
   receivedCapsules: Capsule[];
   isLoading: boolean;
+  onRefetch?: () => void;
 }
 
 interface StatCardProps {
@@ -38,11 +39,12 @@ function StatCard({ label, value, icon: Icon, delay }: StatCardProps) {
   );
 }
 
-export function OverviewView({ onCreateCapsule, onViewCapsule, myCapsules, receivedCapsules, isLoading }: OverviewViewProps) {
+export function OverviewView({ onCreateCapsule, onViewCapsule, myCapsules, receivedCapsules, isLoading, onRefetch }: OverviewViewProps) {
   const allCapsules = [...myCapsules, ...receivedCapsules];
 
   const totalCount = allCapsules.length;
   const lockedCount = allCapsules.filter((c) => {
+    if (c.capsuleType === 'location') return c.status === 'locked';
     if (!c.unlockDate) return c.status === 'locked';
     return new Date(c.unlockDate) > new Date();
   }).length;
@@ -103,7 +105,7 @@ export function OverviewView({ onCreateCapsule, onViewCapsule, myCapsules, recei
           <h3 className="text-sm font-semibold text-ink-muted mb-3">Recent Capsules</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {recentCapsules.map((capsule, index) => (
-              <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} />
+              <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} onLocationVerified={onRefetch} />
             ))}
           </div>
         </div>

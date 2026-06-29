@@ -4,7 +4,8 @@ import { X, Upload, Lock, MapPin, Users, Clock, FileText, Trash2, ChevronLeft, C
 import { useAuth } from '@clerk/clerk-react';
 import { cn } from '../../lib/utils';
 import { CREATE_CAPSULE_STEPS } from './constants';
-import type { GroupRecipientEntry } from './types';
+import { LocationPicker } from './LocationPicker';
+import type { GroupRecipientEntry, UnlockLocation } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const MAX_FILE_SIZE_MB = 50;
@@ -49,8 +50,9 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Phase 3 — Unlock Date
+  // Phase 3 — Unlock Conditions
   const [unlockDate, setUnlockDate] = useState('');
+  const [unlockLocation, setUnlockLocation] = useState<UnlockLocation | null>(null);
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +73,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
     setGroupEmailInput('');
     setUploadedFiles([]);
     setUnlockDate('');
+    setUnlockLocation(null);
     setError('');
     setIsSubmitting(false);
     setIsUploading(false);
@@ -94,6 +97,11 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
   const isPhase1Valid = capsuleType === 'group'
     ? title.trim().length > 0 && groupRecipients.length > 0
     : title.trim().length > 0;
+
+  // Phase 3 validation varies by capsule type
+  const isPhase3Valid = capsuleType === 'location'
+    ? unlockLocation !== null
+    : unlockDate.length > 0 && new Date(unlockDate) > new Date();
 
   // ── Group Recipient Helpers ──────────────────────────────────────────────
 
@@ -170,10 +178,6 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
     setIsDragging(false);
   }, []);
 
-  // ── Phase 3 Validation ────────────────────────────────────────────────────
-
-  const isPhase3Valid = unlockDate.length > 0 && new Date(unlockDate) > new Date();
-
   // ── Upload Files to ImageKit ──────────────────────────────────────────────
 
   const uploadFilesToServer = async (): Promise<string[]> => {
@@ -206,7 +210,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
 
   const handleSubmit = async () => {
     if (!isPhase3Valid) {
-      setError('Please select a valid future date');
+      setError(capsuleType === 'location' ? 'Please select a location on the map' : 'Please select a valid future date');
       return;
     }
 
@@ -236,7 +240,9 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
               }),
           mediaUrls,
           capsuleType,
-          unlockDate: new Date(unlockDate).toISOString(),
+          ...(capsuleType === 'location'
+            ? { unlockLocation }
+            : { unlockDate: new Date(unlockDate).toISOString() }),
         }),
       });
 
@@ -275,7 +281,7 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
 
   const capsuleTypeOptions = [
     { id: 'time' as const, icon: Clock, label: 'Normal', description: 'Time-based capsule', enabled: true },
-    { id: 'location' as const, icon: MapPin, label: 'Location', description: 'Coming soon', enabled: false },
+    { id: 'location' as const, icon: MapPin, label: 'Location', description: 'Location-based capsule', enabled: true },
     { id: 'group' as const, icon: Users, label: 'Group', description: 'Multi-recipient capsule', enabled: true },
   ];
 
@@ -623,39 +629,61 @@ export function CreateCapsuleModal({ isOpen, onClose, onCapsuleCreated }: Create
                     Unlock Conditions
                   </label>
 
-                  {/* Time-Based Lock (Active) */}
-                  <div className="border border-brand/15 bg-brand-soft/40 rounded-xl p-4 relative">
-                    <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-brand" />
-                    <div className="flex gap-3 items-start">
-                      <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand shrink-0">
-                        <Lock className="w-4 h-4" />
+                  {capsuleType === 'location' ? (
+                    /* Location-Based Lock — active for location capsules */
+                    <div className="border border-brand/15 bg-brand-soft/40 rounded-xl p-4 relative">
+                      <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-brand" />
+                      <div className="flex gap-3 items-start mb-3">
+                        <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand shrink-0">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-ink">Location-Based Lock</h4>
+                          <p className="text-xs text-ink-muted mt-0.5">Pin a location on the map. The recipient must be within the radius to unlock.</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-ink">Time-Based Lock</h4>
-                        <p className="text-xs text-ink-muted mt-0.5 mb-3">Choose when this capsule unlocks.</p>
-                        <input
-                          type="datetime-local"
-                          value={unlockDate}
-                          min={getMinDateTime()}
-                          onChange={(e) => setUnlockDate(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg border border-black/10 bg-white text-sm text-ink focus:outline-none focus:border-brand/30 transition-colors"
-                        />
-                      </div>
+                      <LocationPicker
+                        onLocationSelect={(location) => setUnlockLocation(location)}
+                        initialLocation={unlockLocation ?? undefined}
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    /* Time-Based Lock — active for time and group capsules */
+                    <>
+                      <div className="border border-brand/15 bg-brand-soft/40 rounded-xl p-4 relative">
+                        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-brand" />
+                        <div className="flex gap-3 items-start">
+                          <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-brand shrink-0">
+                            <Lock className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-ink">Time-Based Lock</h4>
+                            <p className="text-xs text-ink-muted mt-0.5 mb-3">Choose when this capsule unlocks.</p>
+                            <input
+                              type="datetime-local"
+                              value={unlockDate}
+                              min={getMinDateTime()}
+                              onChange={(e) => setUnlockDate(e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-black/10 bg-white text-sm text-ink focus:outline-none focus:border-brand/30 transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* Location-Based Lock (Disabled) */}
-                  <div className="border border-black/5 rounded-xl p-4 opacity-40 cursor-not-allowed">
-                    <div className="flex gap-3 items-start">
-                      <div className="w-9 h-9 rounded-xl bg-paper border border-black/5 flex items-center justify-center text-ink-muted shrink-0">
-                        <MapPin className="w-4 h-4" />
+                      {/* Location hint for non-location types */}
+                      <div className="border border-black/5 rounded-xl p-4 opacity-40 cursor-not-allowed">
+                        <div className="flex gap-3 items-start">
+                          <div className="w-9 h-9 rounded-xl bg-paper border border-black/5 flex items-center justify-center text-ink-muted shrink-0">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-ink">Location-Based Lock</h4>
+                            <p className="text-xs text-ink-muted mt-0.5">Select &ldquo;Location&rdquo; capsule type to use this feature.</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-ink">Location-Based Lock</h4>
-                        <p className="text-xs text-ink-muted mt-0.5">Coming soon — Recipient must arrive at a specific location.</p>
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

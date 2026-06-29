@@ -11,9 +11,10 @@ interface MyCapsulesViewProps {
   onViewCapsule: (capsuleId: string) => void;
   capsules: Capsule[];
   isLoading: boolean;
+  onRefetch?: () => void;
 }
 
-export function MyCapsulesView({ onCreateCapsule, onViewCapsule, capsules, isLoading }: MyCapsulesViewProps) {
+export function MyCapsulesView({ onCreateCapsule, onViewCapsule, capsules, isLoading, onRefetch }: MyCapsulesViewProps) {
   const [activeFilter, setActiveFilter] = useState<string>('All');
 
   const filteredCapsules = capsules.filter((capsule) => {
@@ -82,7 +83,7 @@ export function MyCapsulesView({ onCreateCapsule, onViewCapsule, capsules, isLoa
       {!isLoading && filteredCapsules.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCapsules.map((capsule, index) => (
-            <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} />
+            <CapsuleCard key={capsule._id} capsule={capsule} index={index} onView={onViewCapsule} onLocationVerified={onRefetch} />
           ))}
         </div>
       )}

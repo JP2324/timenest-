@@ -11,6 +11,19 @@ export interface GroupRecipientEntry {
   email?: string;
 }
 
+// ── Location Payload ─────────────────────────────────────────────────────────
+
+/**
+ * Location data submitted when creating a location-based capsule.
+ */
+export interface UnlockLocationPayload {
+  latitude: number;
+  longitude: number;
+  /** Geofence radius in meters */
+  radius: number;
+  locationName?: string;
+}
+
 // ── Create Payload ───────────────────────────────────────────────────────────
 
 /**
@@ -23,9 +36,12 @@ export interface CreateCapsulePayload {
   recipientUsername?: string;
   mediaUrls: string[];
   capsuleType: CapsuleType;
-  unlockDate: string; // ISO 8601 date string
+  /** Required for time and group capsules; optional for location capsules */
+  unlockDate?: string; // ISO 8601 date string
   /** Required when capsuleType is 'group' */
   groupRecipients?: GroupRecipientEntry[];
+  /** Required when capsuleType is 'location' */
+  unlockLocation?: UnlockLocationPayload;
 }
 
 // ── ImageKit Upload ──────────────────────────────────────────────────────────

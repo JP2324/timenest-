@@ -6,18 +6,51 @@ import * as notificationService from './notificationService';
 import type { ICapsule, IGroupMember } from '../models/capsule.model';
 import type { CreateCapsulePayload, GroupRecipientEntry, ImageKitUploadResult } from '../types/capsule.types';
 
+// ── Constants ────────────────────────────────────────────────────────────────
+
+/** Mean radius of the Earth in meters (WGS-84) */
+const EARTH_RADIUS_METERS = 6_371_000;
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
  * Bulk-updates all capsules whose unlockDate has passed but whose
  * status still reads 'locked'. Called lazily on every read path so
  * the DB stays in sync without a cron job.
+ *
+ * Location capsules have no unlockDate, so they are naturally excluded.
  */
 const syncExpiredCapsuleStatuses = async (): Promise<void> => {
   await Capsule.updateMany(
     { status: 'locked', unlockDate: { $lte: new Date() } },
     { $set: { status: 'unlocked' } }
   );
+};
+
+/**
+ * Calculates the great-circle distance between two coordinates
+ * on the Earth's surface using the Haversine formula.
+ *
+ * @returns Distance in meters
+ */
+const calculateHaversineDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+
+  const deltaLat = toRadians(lat2 - lat1);
+  const deltaLon = toRadians(lon2 - lon1);
+
+  const halfChordSquared =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(deltaLon / 2) ** 2;
+
+  const angularDistance = 2 * Math.atan2(Math.sqrt(halfChordSquared), Math.sqrt(1 - halfChordSquared));
+
+  return EARTH_RADIUS_METERS * angularDistance;
 };
 
 // ── Recipient Resolution ─────────────────────────────────────────────────────
@@ -90,12 +123,16 @@ const resolveGroupRecipients = async (
 
 /**
  * Creates a new capsule and saves it to MongoDB.
- * Handles both normal (time) and group capsule types.
+ * Handles time, group, and location capsule types.
  *
  * For group capsules:
  *  - Resolves multiple recipients from the groupRecipients array
  *  - Populates groupDetails with auto-generated group name and member list
  *  - Sends notifications to all recipients
+ *
+ * For location capsules:
+ *  - Stores unlock coordinates and geofence radius
+ *  - Does not set an unlockDate (recipient must physically verify)
  */
 export const createCapsule = async (
   creatorClerkId: string,
@@ -127,6 +164,7 @@ export const createCapsule = async (
       members: resolved.members,
     };
   } else {
+    // Both time and location capsules use single-recipient resolution
     recipients = await resolveRecipients(payload.recipientEmail, payload.recipientUsername);
   }
 
@@ -138,7 +176,8 @@ export const createCapsule = async (
     capsuleType: payload.capsuleType,
     status: 'locked',
     recipients,
-    unlockDate: new Date(payload.unlockDate),
+    unlockDate: payload.capsuleType === 'location' ? undefined : new Date(payload.unlockDate!),
+    unlockLocation: payload.capsuleType === 'location' ? payload.unlockLocation : undefined,
     groupDetails,
   });
 
@@ -154,6 +193,72 @@ export const createCapsule = async (
   }
 
   return capsule;
+};
+
+// ── Location Verification ────────────────────────────────────────────────────
+
+interface LocationVerificationResult {
+  capsule?: ICapsule;
+  forbidden?: boolean;
+  notFound?: boolean;
+  notLocationCapsule?: boolean;
+  alreadyUnlocked?: boolean;
+  withinRadius?: boolean;
+}
+
+/**
+ * Verifies whether the user's current coordinates fall within the
+ * capsule's geofence. If so, unlocks the capsule.
+ */
+export const verifyAndUnlockLocation = async (
+  capsuleId: string,
+  clerkId: string,
+  userLatitude: number,
+  userLongitude: number
+): Promise<LocationVerificationResult> => {
+  if (!mongoose.Types.ObjectId.isValid(capsuleId)) {
+    return { notFound: true };
+  }
+
+  const user = await User.findOne({ clerkId });
+  if (!user) return { forbidden: true };
+
+  const capsule = await Capsule.findById(capsuleId);
+  if (!capsule) return { notFound: true };
+
+  // Access control: only a recipient may verify
+  const userId = user._id.toString();
+  const isRecipient = capsule.recipients.some(
+    (recipientId) => recipientId.toString() === userId
+  );
+  const isCreator = capsule.creator.toString() === userId;
+
+  if (!isRecipient && !isCreator) {
+    return { forbidden: true };
+  }
+
+  if (capsule.capsuleType !== 'location' || !capsule.unlockLocation) {
+    return { notLocationCapsule: true };
+  }
+
+  if (capsule.status === 'unlocked') {
+    return { alreadyUnlocked: true, capsule };
+  }
+
+  const { latitude: targetLat, longitude: targetLon, radius } = capsule.unlockLocation;
+  const distanceMeters = calculateHaversineDistance(userLatitude, userLongitude, targetLat, targetLon);
+
+  if (distanceMeters > radius) {
+    return { withinRadius: false };
+  }
+
+  // User is within the geofence — unlock the capsule
+  capsule.status = 'unlocked';
+  capsule.isOpened = true;
+  capsule.openedAt = new Date();
+  await capsule.save();
+
+  return { withinRadius: true, capsule };
 };
 
 // ── Read ─────────────────────────────────────────────────────────────────────
@@ -208,7 +313,7 @@ export const getCapsuleById = async (
 
   const userId = user._id.toString();
 
-  // Sync this specific capsule's status if it expired
+  // Sync this specific capsule's status if it expired (time-based only)
   await Capsule.updateOne(
     { _id: capsuleId, status: 'locked', unlockDate: { $lte: new Date() } },
     { $set: { status: 'unlocked' } }

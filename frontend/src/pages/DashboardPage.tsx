@@ -86,6 +86,7 @@ export default function DashboardPage() {
                     myCapsules={myCapsules}
                     receivedCapsules={receivedCapsules}
                     isLoading={isLoading}
+                    onRefetch={refetch}
                   />
                 )}
                 {activeView === 'my-capsules' && (
@@ -94,6 +95,7 @@ export default function DashboardPage() {
                     onViewCapsule={handleViewCapsule}
                     capsules={myCapsules}
                     isLoading={isLoading}
+                    onRefetch={refetch}
                   />
                 )}
                 {activeView === 'received' && (
@@ -101,6 +103,7 @@ export default function DashboardPage() {
                     onViewCapsule={handleViewCapsule}
                     capsules={receivedCapsules}
                     isLoading={isLoading}
+                    onRefetch={refetch}
                   />
                 )}
                 {activeView === 'profile' && (

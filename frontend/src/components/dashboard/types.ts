@@ -6,6 +6,14 @@ export type CapsuleStatus = 'locked' | 'unlocked';
 
 export type CapsuleType = 'time' | 'group' | 'location';
 
+export interface UnlockLocation {
+  latitude: number;
+  longitude: number;
+  /** Geofence radius in meters */
+  radius: number;
+  locationName?: string;
+}
+
 export interface Capsule {
   _id: string;
   creator: string;
@@ -16,6 +24,7 @@ export interface Capsule {
   status: CapsuleStatus;
   recipients: string[];
   unlockDate?: string;
+  unlockLocation?: UnlockLocation;
   isOpened: boolean;
   openedAt?: string;
   createdAt: string;
