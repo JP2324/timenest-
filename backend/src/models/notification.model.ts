@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-export const NOTIFICATION_TYPES = ['group_capsule_received'] as const;
+export const NOTIFICATION_TYPES = ['group_capsule_received', 'capsule_received'] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -39,7 +39,7 @@ const notificationSchema = new Schema<INotification>(
       type: String,
       enum: {
         values: NOTIFICATION_TYPES,
-        message: 'Notification type must be one of: group_capsule_received',
+        message: 'Notification type must be one of: group_capsule_received, capsule_received',
       },
       required: [true, 'Notification type is required'],
     },

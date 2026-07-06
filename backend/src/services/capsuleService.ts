@@ -181,15 +181,29 @@ export const createCapsule = async (
     groupDetails,
   });
 
-  // Send notifications to all group recipients after capsule creation
-  if (payload.capsuleType === 'group' && recipients.length > 0) {
-    await notificationService.createGroupCapsuleNotifications(
-      creator.username,
-      creator._id.toString(),
-      capsule._id.toString(),
-      capsule.title,
-      recipients
-    );
+  // Notification delivery is best-effort — failures must not break capsule creation
+  if (recipients.length > 0) {
+    try {
+      if (payload.capsuleType === 'group') {
+        await notificationService.createGroupCapsuleNotifications(
+          creator.username,
+          creator._id.toString(),
+          capsule._id.toString(),
+          capsule.title,
+          recipients
+        );
+      } else {
+        await notificationService.createCapsuleNotifications(
+          creator.username,
+          creator._id.toString(),
+          capsule._id.toString(),
+          capsule.title,
+          recipients
+        );
+      }
+    } catch (notificationError) {
+      console.error('[Notification] Failed to create notifications for capsule:', capsule._id.toString(), notificationError);
+    }
   }
 
   return capsule;
@@ -289,7 +303,7 @@ export const getReceivedCapsules = async (clerkId: string): Promise<ICapsule[]> 
 
   await syncExpiredCapsuleStatuses();
 
-  const capsules = await Capsule.find({ recipients: user._id })
+  const capsules = await Capsule.find({ recipients: user._id, creator: { $ne: user._id } })
     .sort({ createdAt: -1 });
 
   return capsules;

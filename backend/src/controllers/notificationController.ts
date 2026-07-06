@@ -47,7 +47,7 @@ export const getUnreadCount = async (req: Request, res: Response, next: NextFunc
 
 /**
  * PATCH /api/notifications/:id/read
- * Marks a single notification as read.
+ * Marks a single notification as read by deleting it.
  */
 export const markAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -66,14 +66,14 @@ export const markAsRead = async (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    const notification = await notificationService.markNotificationAsRead(id, clerkId);
+    const deleted = await notificationService.deleteNotification(id, clerkId);
 
-    if (!notification) {
+    if (!deleted) {
       res.status(404).json({ success: false, message: 'Notification not found' });
       return;
     }
 
-    res.status(200).json({ success: true, notification });
+    res.status(200).json({ success: true, message: 'Notification dismissed' });
   } catch (error) {
     next(error);
   }
@@ -81,7 +81,7 @@ export const markAsRead = async (req: Request, res: Response, next: NextFunction
 
 /**
  * PATCH /api/notifications/read-all
- * Marks all notifications as read for the authenticated user.
+ * Dismisses all notifications for the authenticated user.
  */
 export const markAllAsRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -93,8 +93,8 @@ export const markAllAsRead = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    await notificationService.markAllNotificationsAsRead(clerkId);
-    res.status(200).json({ success: true, message: 'All notifications marked as read' });
+    await notificationService.deleteAllNotifications(clerkId);
+    res.status(200).json({ success: true, message: 'All notifications dismissed' });
   } catch (error) {
     next(error);
   }

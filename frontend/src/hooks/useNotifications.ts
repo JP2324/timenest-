@@ -71,11 +71,7 @@ export function useNotifications(): UseNotificationsReturn {
 
       if (response.ok) {
         setNotifications((prev) =>
-          prev.map((notification) =>
-            notification._id === notificationId
-              ? { ...notification, isRead: true }
-              : notification
-          )
+          prev.filter((notification) => notification._id !== notificationId)
         );
         setUnreadCount((prev) => Math.max(prev - 1, 0));
       }
@@ -96,9 +92,7 @@ export function useNotifications(): UseNotificationsReturn {
       });
 
       if (response.ok) {
-        setNotifications((prev) =>
-          prev.map((notification) => ({ ...notification, isRead: true }))
-        );
+        setNotifications([]);
         setUnreadCount(0);
       }
     } catch (error) {

@@ -81,37 +81,65 @@ export const getUnreadCount = async (clerkId: string): Promise<number> => {
   return count;
 };
 
-// ── Update ───────────────────────────────────────────────────────────────────
+// ── Delete (Mark as Read) ────────────────────────────────────────────────────
 
 /**
- * Marks a single notification as read.
- * Verifies ownership before updating.
+ * Deletes a single notification (mark-as-read means removal).
+ * Verifies ownership before deleting.
+ *
+ * @returns The deleted notification, or null if not found / not owned.
  */
-export const markNotificationAsRead = async (
+export const deleteNotification = async (
   notificationId: string,
   clerkId: string
 ): Promise<INotification | null> => {
   const user = await User.findOne({ clerkId });
   if (!user) return null;
 
-  const notification = await Notification.findOneAndUpdate(
-    { _id: notificationId, recipient: user._id },
-    { $set: { isRead: true } },
-    { new: true }
-  );
+  const notification = await Notification.findOneAndDelete({
+    _id: notificationId,
+    recipient: user._id,
+  });
 
   return notification;
 };
 
 /**
- * Marks all notifications as read for a user.
+ * Deletes all notifications for a user (mark-all-as-read means bulk removal).
  */
-export const markAllNotificationsAsRead = async (clerkId: string): Promise<void> => {
+export const deleteAllNotifications = async (clerkId: string): Promise<void> => {
   const user = await User.findOne({ clerkId });
   if (!user) return;
 
-  await Notification.updateMany(
-    { recipient: user._id, isRead: false },
-    { $set: { isRead: true } }
-  );
+  await Notification.deleteMany({ recipient: user._id });
+};
+
+/**
+ * Bulk-creates notifications for recipients of a time or location capsule.
+ * Skips any recipientId that matches the creator.
+ */
+export const createCapsuleNotifications = async (
+  creatorUsername: string,
+  creatorId: string,
+  capsuleId: string,
+  capsuleTitle: string,
+  recipientIds: string[]
+): Promise<void> => {
+  const notifications = recipientIds
+    .filter((recipientId) => recipientId !== creatorId)
+    .map((recipientId) => ({
+      recipient: recipientId,
+      type: 'capsule_received' as const,
+      title: 'New Capsule Received',
+      message: `@${creatorUsername} created a capsule "${capsuleTitle}" for you!`,
+      metadata: {
+        capsuleId,
+        creatorUsername,
+        creatorId,
+      },
+    }));
+
+  if (notifications.length > 0) {
+    await Notification.insertMany(notifications);
+  }
 };
